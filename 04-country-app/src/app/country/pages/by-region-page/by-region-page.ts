@@ -1,11 +1,13 @@
-import { ChangeDetectionStrategy, Component } from '@angular/core';
+import { Component, signal } from '@angular/core';
 import { CountryList } from '../../components/country-list/country-list';
-import { CountrySearch } from '../../components/country-search/country-search';
+import { Country } from '../../interfaces/country.interface';
 
 @Component({
   selector: 'app-by-region-page',
-  imports: [CountrySearch, CountryList],
+  imports: [CountryList],
   templateUrl: './by-region-page.html',
-  changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class ByRegionPage { }
+export class ByRegionPage {
+  countries = signal<Country[]>([]);
+
+}

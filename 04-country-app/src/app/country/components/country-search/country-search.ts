@@ -7,8 +7,8 @@ import { ChangeDetectionStrategy, Component, input, output } from '@angular/core
 })
 export class CountrySearch {
 
-  placeholder = input<String>('Buscar');
+  placeholder = input<string>('Buscar');
 
-  value = output<String>()
+  value = output<string>()
 
 }
