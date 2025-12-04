@@ -1,7 +1,7 @@
 import { HttpClient } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
 import { RESTCountry } from '../interfaces/rest-countries.interface';
-import { map, Observable, catchError, throwError, delay } from 'rxjs';
+import { map, Observable, catchError, throwError, delay, of, tap } from 'rxjs';
 import type { Country } from '../interfaces/country.interface';
 import { CountryMapper } from '../mappers/country.mapper';
 
@@ -13,15 +13,32 @@ const API_URL = 'https://restcountries.com/v3.1'
 export class CountryService {
 
   private http = inject(HttpClient);
+  private queryCacheCapital = new Map<string, Country[]>()
+  private queryCacheCountry = new Map<string, Country[]>()
+  private queryCacheRegion = new Map<string, Country[]>()
 
   searchByCapital(query: string): Observable<Country[]> {
     query = query.toLowerCase();
+
+    // console.log(this.queryCacheCapital)
+
+    if (this.queryCacheCapital.has(query)) {
+      return of(this.queryCacheCapital.get(query) ?? [])
+    }
+
+    // console.log('Fetching from API for query:', query);
 
     return this.http
       .get<RESTCountry[]>(`${API_URL}/capital/${query}`)
       .pipe(
         map((resp) => CountryMapper.mapRestCountryToCountryArray(resp)),
-        catchError(error => {
+        tap(countries => this.queryCacheCapital.set(query, countries)),
+        catchError((error) => {
+
+          if (error.status === 404) {
+            return of<Country[]>([]);
+          }
+
           console.log('Error fetching ', error);
 
           return throwError(() => new Error(`No se pudo obtener países con ese query ${query}`))
@@ -29,15 +46,31 @@ export class CountryService {
       );
   }
 
-  searchByCountry(query: string): Observable<Country[]> {
+  searchByCountry(query: string) {
     query = query.toLowerCase();
+
+    // console.log(this.queryCacheCountry)
+
+    if (this.queryCacheCountry.has(query)) {
+      return of(this.queryCacheCountry.get(query) ?? [])
+        .pipe(
+          delay(2000),
+        )
+    }
+
+    // console.log(`Llegando al servidor por ${query}`)
 
     return this.http
       .get<RESTCountry[]>(`${API_URL}/name/${query}`)
       .pipe(
         map((resp) => CountryMapper.mapRestCountryToCountryArray(resp)),
+        tap(countries => this.queryCacheCountry.set(query, countries)),
         delay(2000),
-        catchError(error => {
+        catchError((error) => {
+          if (error.status === 404) {
+            return of<Country[]>([]);
+          }
+
           console.log('Error fetching ', error);
 
           return throwError(() => new Error(`No se pudo obtener países con ese query ${query}`))
@@ -52,12 +85,37 @@ export class CountryService {
       .pipe(
         map((resp) => CountryMapper.mapRestCountryToCountryArray(resp)),
         map(countries => countries.at(0)),
-        catchError(error => {
+        catchError((error) => {
           console.log('Error fetching ', error);
 
           return throwError(() => new Error(`No se pudo obtener países con ese query ${code}`))
         })
       )
+  }
+
+  searchByRegion(query: string): Observable<Country[]> {
+
+    query = query.toLowerCase();
+
+    if (this.queryCacheRegion.has(query)) {
+      return of(this.queryCacheRegion.get(query) ?? [])
+    }
+
+    return this.http
+      .get<RESTCountry[]>(`${API_URL}/region/${query}`)
+      .pipe(
+        map((resp) => CountryMapper.mapRestCountryToCountryArray(resp)),
+        tap(countries => this.queryCacheRegion.set(query, countries)),
+        catchError((error) => {
+          if (error.status === 404) {
+            return of<Country[]>([]);
+          }
+          console.log('Error fetching ', error);
+          return throwError(() => new Error(`No se pudo obtener países con ese query ${query}`))
+        })
+      )
+
+
   }
 
 }
